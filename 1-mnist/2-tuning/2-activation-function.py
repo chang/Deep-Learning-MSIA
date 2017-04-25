@@ -29,15 +29,15 @@ os.chdir(directory)
 # os.makedirs("train", exist_ok=True)
 
 
-def sigmoid(x):
-    return 1.0 / (1.0 + np.e**-x)
+def sigmoid(x, k):
+    return 1.0 / (1.0 + np.e**-(k*x))
 
 
-learning_rates = ["1.2e-5", "1.4e-5", "1.6e-5", "1.8e-5"]  # Learning rate, decrease if optimization isn't working
+lr = 1e-05
+k_list = [0.5, 1, 2]
 
-for lr_str in learning_rates:
-    lr = float(lr_str)
-    os.makedirs(lr_str)
+for k in k_list:
+    os.makedirs(str(k))
 
     (X, Y), (_, _) = keras.datasets.mnist.load_data()
     # Y = np.random.randint(0, 9, size=Y.shape) # Uncomment this line for
@@ -54,11 +54,11 @@ for lr_str in learning_rates:
 
     losses, accuracies, hw1, hw2, hw3, ma = [], [], [], [], [], []
 
-    for i in range(200):  # Do not change this, we will compare performance at 1000 epochs
+    for i in range(201):  # Do not change this, we will compare performance at 1000 epochs
         # Forward pass
-        L1 = sigmoid(W1.dot(X))
-        L2 = sigmoid(W2.dot(L1))
-        L3 = sigmoid(W3.dot(L2))
+        L1 = sigmoid(W1.dot(X), k=k)
+        L2 = sigmoid(W2.dot(L1), k=k)
+        L3 = sigmoid(W3.dot(L2), k=k)
 
         # Backward pass
         dW3 = (L3 - T) * L3 * (1 - L3)
@@ -111,7 +111,7 @@ for lr_str in learning_rates:
             # Aim for 90% accuracy in 200 epochs
             ax3.axhline(90, color='red', linestyle=':')
             ax3.set_title("Accuracy: %0.2f%%" % accpct)
-            plt.savefig(os.path.join(lr_str, 'train-acc-%05d.png' % i))
+            plt.savefig(os.path.join(str(k), 'train-acc-%05d.png' % i))
             plt.show(), plt.close()
 
             fig, ((ax1, ax2, ax3, ax4), (ax5, ax6, ax7, ax8),
@@ -153,5 +153,5 @@ for lr_str in learning_rates:
 
             plt.suptitle(
                 "Weight and update visualization ACC: %0.2f%% LR=%0.8f" % (accpct, lr))
-            plt.savefig(os.path.join(lr_str, 'train-%05d.png' % i))
+            plt.savefig(os.path.join(str(k), 'train-%05d.png' % i))
             plt.show(), plt.close()

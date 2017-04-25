@@ -3,24 +3,19 @@ import keras.datasets.mnist
 import numpy as np
 import os
 
-ON_MSIA_SERVER = False
-ON_AWS = True
+ON_MSIA_SERVER = True
 
 # extract filename
 filename = __file__.split("/")[-1]
 filename = filename.split(".")[0]
 
-# import matplotlib, bypass graphics display if on server
-if ON_MSIA_SERVER or ON_AWS:
-    import matplotlib
-    matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-
 if ON_MSIA_SERVER:
     os.chdir("/home/lab.analytics.northwestern.edu/echang/Deep-Learning-MSIA/1-mnist/2-tuning")
-elif ON_AWS:
-    os.chdir("/home/ubuntu/Deep-Learning-MSIA/1-mnist/2-tuning")
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
 else:
+    import matplotlib.pyplot as plt
     os.chdir("/Users/eric/Documents/Spring2017/Deep-Learning-MSIA/1-mnist/2-tuning")
 
 directory = filename
@@ -29,28 +24,29 @@ os.chdir(directory)
 # os.makedirs("train", exist_ok=True)
 
 
+(X, Y), (_, _) = keras.datasets.mnist.load_data()
+# Y = np.random.randint(0, 9, size=Y.shape) # Uncomment this line for
+# random labels extra credit
+X = X.astype('float32').reshape((len(X), -1)).T / 255.0  # 784 x 60000
+T = np.zeros((len(Y), 10), dtype='float32').T  # 10 x 60000
+for i in range(len(Y)):
+    T[Y[i], i] = 1
+
+#%% Setup: 784 -> 256 -> 128 -> 10
+W1 = 2 * np.random.rand(784, 256).astype('float32').T - 1
+W2 = 2 * np.random.rand(256, 128).astype('float32').T - 1
+W3 = 2 * np.random.rand(128,  10).astype('float32').T - 1
+
+
 def sigmoid(x):
     return 1.0 / (1.0 + np.e**-x)
 
 
-learning_rates = ["1.2e-5", "1.4e-5", "1.6e-5", "1.8e-5"]  # Learning rate, decrease if optimization isn't working
+learning_rates = ["1e-2", "1e-3", "1e-4", "1e-5"]  # Learning rate, decrease if optimization isn't working
 
 for lr_str in learning_rates:
     lr = float(lr_str)
     os.makedirs(lr_str)
-
-    (X, Y), (_, _) = keras.datasets.mnist.load_data()
-    # Y = np.random.randint(0, 9, size=Y.shape) # Uncomment this line for
-    # random labels extra credit
-    X = X.astype('float32').reshape((len(X), -1)).T / 255.0  # 784 x 60000
-    T = np.zeros((len(Y), 10), dtype='float32').T  # 10 x 60000
-    for i in range(len(Y)):
-        T[Y[i], i] = 1
-
-    #%% Setup: 784 -> 256 -> 128 -> 10
-    W1 = 2 * np.random.rand(784, 256).astype('float32').T - 1
-    W2 = 2 * np.random.rand(256, 128).astype('float32').T - 1
-    W3 = 2 * np.random.rand(128,  10).astype('float32').T - 1
 
     losses, accuracies, hw1, hw2, hw3, ma = [], [], [], [], [], []
 
@@ -111,7 +107,6 @@ for lr_str in learning_rates:
             # Aim for 90% accuracy in 200 epochs
             ax3.axhline(90, color='red', linestyle=':')
             ax3.set_title("Accuracy: %0.2f%%" % accpct)
-            plt.savefig(os.path.join(lr_str, 'train-acc-%05d.png' % i))
             plt.show(), plt.close()
 
             fig, ((ax1, ax2, ax3, ax4), (ax5, ax6, ax7, ax8),

@@ -33,11 +33,32 @@ def sigmoid(x):
     return 1.0 / (1.0 + np.e**-x)
 
 
-learning_rates = ["1.2e-5", "1.4e-5", "1.6e-5", "1.8e-5"]  # Learning rate, decrease if optimization isn't working
+def initialize_weights(x, y, method):
+    """
+    initializes a vector of shape (x, y)
+    with weights created using various methods.
+    "random": random weights in range [-1, 1]
+    "standard_normal": weights sampled from a standard normal distribution
+    "standard_normal_variance_normalized": weights sampled from a standard normal distribution, then variance normalized
+    """
+    if method == "random":
+        weights = 2 * np.random.rand(x, y).astype('float32').T - 1
+    elif method == "standard_normal":
+        weights = np.random.randn(x, y).astype('float32').T
+    elif method == "standard_normal_variance_normalized":
+        weights = np.random.randn(x, y).astype('float32').T / np.sqrt(x)
+    else:
+        raise ValueError("Weight initialization method not valid.")
 
-for lr_str in learning_rates:
-    lr = float(lr_str)
-    os.makedirs(lr_str)
+    return weights
+
+
+lr = 1e-05
+initialization_methods = ["random", "standard_normal", "standard_normal_variance_normalized"]
+
+for method in initialization_methods:
+    subdirectory = method
+    os.makedirs(subdirectory)
 
     (X, Y), (_, _) = keras.datasets.mnist.load_data()
     # Y = np.random.randint(0, 9, size=Y.shape) # Uncomment this line for
@@ -47,14 +68,14 @@ for lr_str in learning_rates:
     for i in range(len(Y)):
         T[Y[i], i] = 1
 
-    #%% Setup: 784 -> 256 -> 128 -> 10
-    W1 = 2 * np.random.rand(784, 256).astype('float32').T - 1
-    W2 = 2 * np.random.rand(256, 128).astype('float32').T - 1
-    W3 = 2 * np.random.rand(128,  10).astype('float32').T - 1
+    # Initialize weights
+    W1 = initialize_weights(784, 256, method)
+    W2 = initialize_weights(256, 128, method)
+    W3 = initialize_weights(128,  10, method)
 
     losses, accuracies, hw1, hw2, hw3, ma = [], [], [], [], [], []
 
-    for i in range(200):  # Do not change this, we will compare performance at 1000 epochs
+    for i in range(201):  # Do not change this, we will compare performance at 1000 epochs
         # Forward pass
         L1 = sigmoid(W1.dot(X))
         L2 = sigmoid(W2.dot(L1))
@@ -111,7 +132,7 @@ for lr_str in learning_rates:
             # Aim for 90% accuracy in 200 epochs
             ax3.axhline(90, color='red', linestyle=':')
             ax3.set_title("Accuracy: %0.2f%%" % accpct)
-            plt.savefig(os.path.join(lr_str, 'train-acc-%05d.png' % i))
+            plt.savefig(os.path.join(subdirectory, 'train-acc-%05d.png' % i))
             plt.show(), plt.close()
 
             fig, ((ax1, ax2, ax3, ax4), (ax5, ax6, ax7, ax8),
@@ -153,5 +174,5 @@ for lr_str in learning_rates:
 
             plt.suptitle(
                 "Weight and update visualization ACC: %0.2f%% LR=%0.8f" % (accpct, lr))
-            plt.savefig(os.path.join(lr_str, 'train-%05d.png' % i))
+            plt.savefig(os.path.join(subdirectory, 'train-%05d.png' % i))
             plt.show(), plt.close()

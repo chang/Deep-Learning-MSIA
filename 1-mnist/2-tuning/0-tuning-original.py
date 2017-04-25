@@ -3,8 +3,11 @@ import keras.datasets.mnist
 import numpy as np
 import os
 
-VERSION = "original"
 ON_MSIA_SERVER = True
+
+# extract filename
+filename = __file__.split("/")[-1]
+filename = filename.split(".")[0]
 
 if ON_MSIA_SERVER:
     os.chdir("/home/lab.analytics.northwestern.edu/echang/Deep-Learning-MSIA/1-mnist")
@@ -15,7 +18,7 @@ else:
     import matplotlib.pyplot as plt
     os.chdir("/Users/eric/Documents/Spring2017/Deep-Learning-MSIA/1-mnist")
 
-directory = "run-" + VERSION
+directory = "run-" + filename
 os.makedirs(directory, exist_ok=True)
 os.chdir(directory)
 os.makedirs("train", exist_ok=True)
@@ -42,17 +45,17 @@ def sigmoid(x):
 
 losses, accuracies, hw1, hw2, hw3, ma = [], [], [], [], [], []
 
-for i in range(1000):  # Do not change this, we will compare performance at 1000 epochs
+for i in range(200):  # Do not change this, we will compare performance at 1000 epochs
     # Forward pass
     L1 = sigmoid(W1.dot(X))
     L2 = sigmoid(W2.dot(L1))
     L3 = sigmoid(W3.dot(L2))
-    
+
     # Backward pass
     dW3 = (L3 - T) * L3 * (1 - L3)
     dW2 = W3.T.dot(dW3) * (L2 * (1 - L2))
     dW1 = W2.T.dot(dW2) * (L1 * (1 - L1))
-    
+
     # Update
     W3 -= lr * np.dot(dW3, L2.T)
     W2 -= lr * np.dot(dW2, L1.T)
