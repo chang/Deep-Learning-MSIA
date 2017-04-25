@@ -34,7 +34,7 @@ def sigmoid(x):
 
 losses, accuracies, hw1, hw2, hw3, ma = [], [], [], [], [], []
 
-for i in range(1000):  # Do not change this, we will compare performance at 1000 epochs
+for i in range(20):  # Do not change this, we will compare performance at 1000 epochs
     # Forward pass
     L1 = sigmoid(W1.dot(X))
     L2 = sigmoid(W2.dot(L1))
