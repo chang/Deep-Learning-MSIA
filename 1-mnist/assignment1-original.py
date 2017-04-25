@@ -5,11 +5,16 @@ import os
 import matplotlib.pyplot as plt
 
 VERSION = "original"
-directory = "run-" + VERSION
+ON_MSIA_SERVER = True
 
-os.chdir("/Users/eric/Documents/Spring2017/Deep-Learning-MSIA/1-mnist")
+if ON_MSIA_SERVER:
+    os.chdir("/home/lab.analytics.northwestern.edu/echang/Deep-Learning-MSIA/1-mnist")
+else:
+    os.chdir("/Users/eric/Documents/Spring2017/Deep-Learning-MSIA/1-mnist")
+    
+directory = "run-" + VERSION
 os.makedirs(directory, exist_ok=True)
-os.chdir("run-" + VERSION)
+os.chdir(directory)
 os.makedirs("train", exist_ok=True)
 
 (X, Y), (_, _) = keras.datasets.mnist.load_data()
