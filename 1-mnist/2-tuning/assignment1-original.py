@@ -14,7 +14,7 @@ if ON_MSIA_SERVER:
 else:
     import matplotlib.pyplot as plt
     os.chdir("/Users/eric/Documents/Spring2017/Deep-Learning-MSIA/1-mnist")
-    
+
 directory = "run-" + VERSION
 os.makedirs(directory, exist_ok=True)
 os.chdir(directory)
