@@ -83,7 +83,6 @@ def hide_axes(ax):
 
 
 class Heatmap:
-
     def __init__(self, model):
         self.nclasses = 10
         self.model = model
@@ -126,7 +125,7 @@ class Heatmap:
         masks = np.concatenate([self.make_masks(im, n=i) for i in nmasks])
         masknorm = masks.sum(axis=0)
 
-        preds = model.predict(im_flat)
+        preds = self.model.predict(im_flat)
         # predicted_num = str(preds.argmax() - 1)
         
         predidx = np.argsort(preds)[::-1]
@@ -134,20 +133,24 @@ class Heatmap:
         for i, p in enumerate(predidx[:5]):
             print(p, preds[p])
             topclasses[i] = (p, p)
-        print('Top classes: ', topclasses)
+            
+        # print first element of each tuple in topclasses - they are duplicates
+        topclasses_reduced = {}
+        for k in topclasses.keys():
+            topclasses_reduced[k] = str(topclasses[k][0])
+        print('Top classes: ', topclasses_reduced)
 
         heatmaps = np.zeros((5,) + im.shape[1:3])
 
         for m in tqdm.tqdm(masks):
             prediction = self.model.predict(im * self.gray2rgb(m))
-                  
             for c in range(5):
                 clsnum, clsname = topclasses[c]
                 heatmaps[c] += (prediction[clsnum] * m)
         for h in heatmaps:
             h = h / masknorm
         fig, axes = plt.subplots(2, 6, figsize=(10, 5))
-        axes[0, 0].imshow(ci), axes[1, 0].imshow(ci)
+        axes[0, 0].imshow(ci, cmap="gray"), axes[1, 0].imshow(ci, cmap="gray")  # convert to grayscale
         axes[0, 0].set_title(title)
         hide_axes(axes[0, 0]), hide_axes(axes[1, 0])
         predictions = np.sum(heatmaps, axis=(1, 2,))
@@ -165,12 +168,12 @@ class Heatmap:
             axes[0, n + 1].set_title(str(topclasses[i][1]) +
                                      ': %0.1f%%' % (100 * predictions[i] / predictions.sum()))
         fig.tight_layout()
-        plt.show()
-        return heatmaps
+        # plt.show()
+        # return heatmaps
+        return fig  # return the figure instead for saving
 
 
 if __name__ == "__main__":
-    
     model = Model(weights)
     heatmap = Heatmap(model)
     img = X[:, 0].reshape(28, 28)
@@ -178,4 +181,4 @@ if __name__ == "__main__":
     h = heatmap.explain_prediction_heatmap(img, nmasks=(4, 5))
 
 #    #%% Higher resolution heatmap
-#    h = heatmap.explain_prediction_heatmap(img, nmasks=(3, 4, 5, 7))
+    h = heatmap.explain_prediction_heatmap(img, nmasks=(3, 4, 5, 7))

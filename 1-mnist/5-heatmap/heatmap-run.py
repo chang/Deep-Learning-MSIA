@@ -1,21 +1,15 @@
-# Homework 1 starter code: Simple neural network test test
 import keras.datasets.mnist
 import numpy as np
 import os
 import heatmap as hm
 from heatmap import Heatmap
 
-########################################################################## 
-# YOU CAN IGNORE THIS STUFF - I MADE THESE CHANGES FOR MY OWN WORKFLOW
-ON_SERVER = True
-
-# import matplotlib, bypassing graphics display if on server
-if ON_SERVER:
-    import matplotlib
-    matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-
-
+"""
+Adapted heatmap code
+MSIA 490: Deep Learning
+Homework 1
+Eric Chang
+"""
 # extract filename and directory
 path = os.path.abspath(__file__)
 filename = path.split("/")[-1]
@@ -24,25 +18,25 @@ directory = path[0:-len(filename)]
 os.chdir(directory)
 os.makedirs(filename.split('.py')[0], exist_ok=True)
 os.chdir(filename.split('.py')[0])
-##########################################################################
 
-# TUNING PARAMETERS
-activation_function = "relu"
-cost_function = "cross_entropy"
-init_method = "random_variance_normalized"
+
+### TUNING PARAMETERS #########################################################
+activation_function = "sigmoid"
+cost_function = "mse"
+init_method = "random"
 lr = 1e-05
-original_viz = False
+original_viz = True
 heatmap_viz = True
 
-subdirectory = "final"
+ON_SERVER = True
+subdirectory = "heatmap-sigmoid"
 
 # parameter options
 assert activation_function in ['sigmoid', 'tanh', 'relu', 'leaky_relu']
 assert cost_function in ['mse', 'cross_entropy']
 assert init_method in ["random", "random_variance_normalized",
                        "standard_normal", "standard_normal_variance_normalized"]
-
-os.makedirs(subdirectory, exist_ok=True)
+###############################################################################
 
 
 def activation(x, method):
@@ -137,7 +131,14 @@ class Model:
         return L3
 
 
+if ON_SERVER:
+    import matplotlib
+    matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
 if __name__ == "__main__":
+    os.makedirs(subdirectory, exist_ok=True)
+    
     (X, Y), (_, _) = keras.datasets.mnist.load_data()
 
     # Y = np.random.randint(0, 9, size=Y.shape) # Uncomment this line for
@@ -179,16 +180,29 @@ if __name__ == "__main__":
 
         # HEATMAP
         if heatmap_viz and i % 10 == 0:
-            img = X[:, 0].reshape(28, 28)  # test heatmap on first image
+            images = [X[:, 7],   # 3
+                      X[:, 4],   # 1
+                      X[:, 10],  # messed up 3
+                      X[:, 11]]  # weird 5
 
-            images = X
-            activations = (L1, L2, L3)
+            # create directories for heatmaps
+            if i == 0:
+                for i in range(len(images)):
+                    os.makedirs(subdirectory + "/" + "heat-" + str(i))
+            
+            # img = X[:, 0].reshape(28, 28)  # test heatmap on first image
             weights = (W1, W2, W3)
 
             # bundle into our class Model
             model = Model(weights)
             heatmap = Heatmap(model)
-            h = heatmap.explain_prediction_heatmap(img, nmasks=(4, 5))
+            
+            # call heatmaps
+            for j, img in enumerate(images):
+                img = img.reshape(28, 28)
+                h = heatmap.explain_prediction_heatmap(img, nmasks=(3, 4, 5, 7))
+                path = os.path.join(subdirectory, "heat-" + str(j), 'heat-%05d.png' % i)
+                h.savefig(path)
 
         if original_viz and i % 10 == 0:
             predictions = np.zeros(L3.shape, dtype='float32')
