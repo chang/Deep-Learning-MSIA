@@ -1,37 +1,42 @@
+"""
+Heatmaps adapted for MNIST
+MSIA 490: Deep Learning - Homework 1
+4/26/17
+Eric Chang
+"""
 import keras.datasets.mnist
 import numpy as np
 import os
-import heatmap as hm
+import matplotlib
+matplotlib.use('Agg')  # without the .use() option, matplotlib doesn't play nice with AWS
+import matplotlib.pyplot as plt
 from heatmap import Heatmap
 
-"""
-Adapted heatmap code
-MSIA 490: Deep Learning
-Homework 1
-Eric Chang
-"""
-# extract filename and directory
-path = os.path.abspath(__file__)
-filename = path.split("/")[-1]
-directory = path[0:-len(filename)]
 
-os.chdir(directory)
-os.makedirs(filename.split('.py')[0], exist_ok=True)
-os.chdir(filename.split('.py')[0])
+# TUNING PARAMETERS ###########################################################
+activation_function = "relu"
+cost_function = "cross_entropy"
+init_method = "random_variance_normalized"
 
-
-### TUNING PARAMETERS #########################################################
-activation_function = "sigmoid"
-cost_function = "mse"
-init_method = "random"
 lr = 1e-05
-original_viz = True
-heatmap_viz = True
+epochs = 1000
 
-ON_SERVER = True
-subdirectory = "heatmap-sigmoid"
+visualize_every_n = 10
+training_visuals = True
+heatmap_visuals = True
 
-# parameter options
+subdirectory = "heatmaps-relu"
+
+# directory structure:
+#   filename/
+#       subdirectory/
+#           heat1/
+#               heat00000.jpg, heat00001.jpg....
+#           heat2/
+#               heat00000.jpg, heat00001.jpg...
+#           train00000.jpg, train00001.jpg...
+
+# options
 assert activation_function in ['sigmoid', 'tanh', 'relu', 'leaky_relu']
 assert cost_function in ['mse', 'cross_entropy']
 assert init_method in ["random", "random_variance_normalized",
@@ -41,16 +46,13 @@ assert init_method in ["random", "random_variance_normalized",
 
 def activation(x, method):
     """
-    returns an array with the specified activation applied
+    returns the input array with the specified activation applied
     """
     if method == "sigmoid":
         return 1.0 / (1.0 + np.e**-x)
     elif method == "tanh":
         return np.tanh(x)
     elif method == "relu" or method == "leaky_relu":
-        if init_method not in ["standard_normal_variance_normalized",
-                               "random_variance_normalized"]:
-            print("Failing to normalize variance when using ReLU may result in exploding activations.")
         return np.maximum(0, x)
 
 
@@ -64,13 +66,14 @@ def gradient(x, method):
         return 1 - x**2
     elif method == "relu":
         gradient = x.copy()
+        gradient[gradient <= 0] = 0
         gradient[gradient != 0] = 1
         return gradient
     elif method == "leaky_relu":
         gradient = x.copy()
         gradient[gradient != 0] = 1
-        gradient[gradient == 0] = 0.01
-        return gradient        
+        gradient[gradient <= 0] = 0.01
+        return gradient
 
 
 def initialize_weights(x, y, method):
@@ -82,38 +85,39 @@ def initialize_weights(x, y, method):
     "standard_normal_variance_normalized": weights sampled from a standard normal distribution, then variance normalized
     """
     if method == "random":
-        weights = 2 * np.random.rand(x, y).astype('float32').T - 1
+        return 2 * np.random.rand(x, y).astype('float32').T - 1
     elif method == "random_variance_normalized":
-        weights = (2 * np.random.rand(x, y).astype('float32').T - 1) / np.sqrt(x)
+        weights = 2 * np.random.rand(x, y).astype('float32').T - 1
+        return weights / np.sqrt(x)
     elif method == "standard_normal":
-        weights = np.random.randn(x, y).astype('float32').T
+        return np.random.randn(x, y).astype('float32').T
     elif method == "standard_normal_variance_normalized":
-        weights = (np.random.randn(x, y).astype('float32').T) / np.sqrt(x)
-    else:
-        raise ValueError("Weight initialization method not valid.")
-
-    return weights
+        weights = np.random.randn(x, y).astype('float32').T
+        return weights / np.sqrt(x)
 
 
 class Model:
+    """
+    A simple Model class to replace the keras.Model class in the heatmap code
+    """
     def __init__(self, weights):
         self.weights = weights
 
     def predict(self, new_img):
         """
-        given an input image of shape 28x28 or 784
-        returns class probabilites
+        given an input image of shape 28x28 or 784, returns class probabilites
         """
         assert isinstance(new_img, np.ndarray)
 
+        # input from the heatmap could be flat, 28x28, or with RGB channels
+        # so we need to flatten it to (784, )
         if not new_img.shape == (784,):
-            
             if new_img.shape == (28, 28):
                 new_img = new_img.reshape(784)
             elif new_img.shape == (1, 28, 28, 3):
-                new_img = new_img[0, :, :, 0].reshape(784)  # just choose an arbitrary channel
+                new_img = new_img[0, :, :, 0].reshape(784)  # choose an arbitrary channel - they're all the same in grayscale
             else:
-                raise ValueError("Invalid image shape", new_img.shape)
+                raise ValueError("Invalid image shape: " + str(new_img.shape))
 
         if not new_img.max() == 1:
             new_img = new_img / new_img.max()
@@ -123,24 +127,27 @@ class Model:
         L1 = activation(W1.dot(new_img), activation_function)
         L2 = activation(W2.dot(L1), activation_function)
         L3 = activation(W3.dot(L2), activation_function)
-        
+
         if not L3.shape == (10, ):
             L3 = L3[:, 0]
+            assert L3.shape == (10, )
 
-        # RETURN A NUMPY ARRAY OF SHAPE (10, )
         return L3
 
 
-if ON_SERVER:
-    import matplotlib
-    matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-
 if __name__ == "__main__":
-    os.makedirs(subdirectory, exist_ok=True)
-    
-    (X, Y), (_, _) = keras.datasets.mnist.load_data()
+    # extract filename and directory
+    path = os.path.abspath(__file__)
+    filename = path.split("/")[-1]
+    directory = path[0:-len(filename)]
 
+    # create directory structure:
+    os.chdir(directory)
+    os.makedirs(filename.split('.py')[0], exist_ok=True)
+    os.chdir(filename.split('.py')[0])
+    os.makedirs(subdirectory, exist_ok=True)
+
+    (X, Y), (_, _) = keras.datasets.mnist.load_data()
     # Y = np.random.randint(0, 9, size=Y.shape) # Uncomment this line for
     # random labels extra credit
     X = X.astype('float32').reshape((len(X), -1)).T / 255.0  # 784 x 60000
@@ -149,13 +156,15 @@ if __name__ == "__main__":
         T[Y[i], i] = 1
 
     # Initialize weights
+    if activation_function in ['relu', 'leaky_relu'] and "normalized" not in init_method:
+        print("Not using normalized inputs with ReLU may result in exploding activations.")
     W1 = initialize_weights(784, 256, init_method)
     W2 = initialize_weights(256, 128, init_method)
     W3 = initialize_weights(128, 10, init_method)
 
     losses, accuracies, hw1, hw2, hw3, ma = [], [], [], [], [], []
 
-    for i in range(1001):  # Do not change this, we will compare performance at 1000 epochs
+    for i in range(epochs + 1):
         # Forward pass
         L1 = activation(W1.dot(X), activation_function)
         L2 = activation(W2.dot(L1), activation_function)
@@ -163,7 +172,7 @@ if __name__ == "__main__":
 
         # Backward pass
         if cost_function == "mse":
-            dW3 = (L3 - T) * gradient(L3, activation_function)  # * L3 * (1 - L3)
+            dW3 = (L3 - T) * gradient(L3, activation_function)
         elif cost_function == "cross_entropy":
             dW3 = (L3 - T)
         dW2 = W3.T.dot(dW3) * gradient(L2, activation_function)
@@ -178,8 +187,8 @@ if __name__ == "__main__":
         print("[%04d] MSE Loss: %0.6f" % (i, loss))
         losses.append(loss)
 
-        # HEATMAP
-        if heatmap_viz and i % 10 == 0:
+        # HEATMAP VISUALIZATIONS
+        if heatmap_visuals and i % visualize_every_n == 0:
             images = [X[:, 7],   # 3
                       X[:, 4],   # 1
                       X[:, 10],  # messed up 3
@@ -188,23 +197,26 @@ if __name__ == "__main__":
             # create directories for heatmaps
             if i == 0:
                 for i in range(len(images)):
-                    os.makedirs(subdirectory + "/" + "heat-" + str(i))
-            
-            # img = X[:, 0].reshape(28, 28)  # test heatmap on first image
-            weights = (W1, W2, W3)
+                    os.makedirs(os.path.join(subdirectory, "heat-" + str(i)))
 
-            # bundle into our class Model
+            weights = (W1, W2, W3)
             model = Model(weights)
             heatmap = Heatmap(model)
-            
-            # call heatmaps
-            for j, img in enumerate(images):
+            hmaps = []
+
+            for img in images:
                 img = img.reshape(28, 28)
-                h = heatmap.explain_prediction_heatmap(img, nmasks=(3, 4, 5, 7))
+                hmaps.append(heatmap.explain_prediction_heatmap(img), nmasks=(3, 4, 5, 7))
+
+            for j, h in enumerate(hmaps):
                 path = os.path.join(subdirectory, "heat-" + str(j), 'heat-%05d.png' % i)
+                h.suptitle("Epoch: " + str(i))
+                # h.text(x=0.5, y=0.5, s="Epoch: " + str(i))
                 h.savefig(path)
 
-        if original_viz and i % 10 == 0:
+
+        # TRAINING VISUALIZATIONS
+        if training_visuals and i % visualize_every_n == 0:
             predictions = np.zeros(L3.shape, dtype='float32')
             for j, m in enumerate(np.argmax(L3.T, axis=1)):
                 predictions[m, j] = 1
