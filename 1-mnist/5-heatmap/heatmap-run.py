@@ -206,7 +206,7 @@ if __name__ == "__main__":
 
             for img in images:
                 img = img.reshape(28, 28)
-                hmaps.append(heatmap.explain_prediction_heatmap(img), nmasks=(3, 4, 5, 7))
+                hmaps.append(heatmap.explain_prediction_heatmap(img, nmasks=(3, 4, 5, 7)))
 
             for j, h in enumerate(hmaps):
                 path = os.path.join(subdirectory, "heat-" + str(j), 'heat-%05d.png' % i)
